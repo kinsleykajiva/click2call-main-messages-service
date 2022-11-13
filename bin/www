@@ -1,0 +1,113 @@
+#!/usr/bin/env node
+
+
+var app = require('../app');
+var debug = require('debug')('main-messeges-service:server');
+var http = require('http');
+var url = require('url');
+const eurekaHelper = require("../config/eureka-helper");
+const sequelizeDB = require("../config/database");
+
+
+
+
+const {winston,logger} = require("../utils/loggerUtls");
+
+
+
+
+require('dotenv').config();
+
+
+
+/**
+ * Get port from environment and store in Express.
+ */
+const port = normalizePort(process.env.PORT);
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+const server = http.createServer(app);
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+ eurekaHelper.registerWithEureka(process.env.SERVICE_NAME, process.env.PORT);
+
+function normalizePort(val) {
+    var port = parseInt(val, 10);
+
+    if (isNaN(port)) {
+        // named pipe
+        return val;
+    }
+
+    if (port >= 0) {
+        // port number
+        return port;
+    }
+
+    return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+    if (error.syscall !== 'listen') {
+        throw error;
+    }
+
+    var bind = typeof port === 'string'
+        ? 'Pipe ' + port
+        : 'Port ' + port;
+
+    // handle specific listen errors with friendly messages
+    switch (error.code) {
+        case 'EACCES':
+            console.error(bind + ' requires elevated privileges');
+            logger.error(bind + ' requires elevated privileges');
+            process.exit(1);
+            break;
+        case 'EADDRINUSE':
+            console.error(bind + ' is already in use');
+            logger.error(bind + ' is already in use');
+            process.exit(1);
+            break;
+        default:
+            throw error;
+    }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+async function onListening() {
+
+    try {
+        await sequelizeDB.authenticate();
+        logger.log('info', 'Connection has been established successfully.');
+
+        console.log('Connection has been established successfully.');
+
+    } catch (error) {
+        console.error('Unable to connect to the database:', error);
+        logger.error('error', 'Unable to connect to the database:', error);
+    }
+    console.log()
+
+    var addr = server.address();
+    var bind = typeof addr === 'string'
+        ? 'pipe ' + addr
+        : 'port ' + addr.port;
+    debug('Listening on ' + bind);
+}
+
+process.on('exit', function () {
+    console.log('Your process is exiting');
+    logger.error('Your process is exiting');
+});
+
